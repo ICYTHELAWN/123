@@ -1,18 +1,12 @@
 import tkinter as tk
 
+from game_scene import BUBBLE_READY_TEXT, FPS_MS, GameSceneMixin, TEXT_SPEEDS
+
 
 WINDOW_WIDTH = 1024
 WINDOW_HEIGHT = 768
-TRANSITION_MS = 1000
-HOLD_MS = 2000
-CONTENT_DELAY_MS = 1000
-CHOICE_FADE_MS = 500
-BUBBLE_FADE_MS = 500
-DIALOG_DELAY_MS = 1000
-CHOICE_DELAY_MS = 700
 SETTINGS_PANEL_MS = 450
 CONFIRM_MESSAGE_MS = 1000
-FPS_MS = 16
 
 APP_TITLE = "\ubbf8\ub140 \uc5f0\uc560 \uc2dc\ubbac\ub808\uc774\ud130"
 TITLE_TEXT = "\ubbf8 \uc5f0 \uc2dc"
@@ -38,18 +32,9 @@ TEXT_SPEED_TEXT = "\ud14d\uc2a4\ud2b8 \ucd9c\ub825 \uc18d\ub3c4"
 SLOW_TEXT = "\ub290\ub9ac\uac8c"
 NORMAL_TEXT = "\ubcf4\ud1b5"
 FAST_TEXT = "\ube60\ub974\uac8c"
-KEI_TEXT = "dummy"
-BUBBLE_READY_TEXT = "dummy :"
-BUBBLE_DIALOG_GAP = "   "
-DIALOG_TEXT = "\uc544, \uc548\ub155\ud558\uc138\uc694. \ub77c\uc6b0\ub2d8."
-TEXT_SPEEDS = {
-    "slow": ("\ub290\ub9ac\uac8c", 600),
-    "normal": ("\ubcf4\ud1b5", 1000),
-    "fast": ("\ube60\ub974\uac8c", 1700),
-}
 
 
-class MiyeonsiApp:
+class MiyeonsiApp(GameSceneMixin):
     def __init__(self):
         self.root = tk.Tk()
         self.root.title(APP_TITLE)
@@ -69,6 +54,7 @@ class MiyeonsiApp:
         self.waiting_for_choice_click = False
         self.choice_items = []
         self.choice_label = None
+        self.choice_dialog_label = None
         self.bubble_text = BUBBLE_READY_TEXT
         self.bubble_color = "#000000"
         self.settings_open = False
@@ -101,6 +87,8 @@ class MiyeonsiApp:
         self.choices_visible = False
         self.choice_label_visible = False
         self.waiting_for_choice_click = False
+        self.choice_label = None
+        self.choice_dialog_label = None
         self.canvas.unbind("<Button-1>")
         self.bubble_text = BUBBLE_READY_TEXT
         self.bubble_color = "#000000"
@@ -549,321 +537,6 @@ class MiyeonsiApp:
         self.settings_message_after = None
         if self.settings_open and self.settings_panel_x is not None:
             self.draw_settings_panel(self.settings_panel_x)
-
-    def draw_dummy_screen(self):
-        self.canvas.delete("all")
-        self.canvas.configure(bg="white")
-        self.draw_dummy_text()
-        if self.choice_label_visible:
-            self.draw_choice_label(self.bubble_text, self.bubble_color)
-        if self.choices_visible:
-            self.draw_choices(outline="#000000")
-        self.draw_game_close_button()
-
-    def draw_dummy_text(self):
-        width, height = self.size()
-        separator_y = self.choice_area_top(height)
-        label_divider_y = self.choice_label_divider_y(height)
-
-        self.canvas.delete("game_frame")
-        self.canvas.delete("dummy_text")
-
-        self.canvas.create_rectangle(
-            2,
-            2,
-            width - 2,
-            height - 2,
-            outline="black",
-            width=4,
-            tags=("game_frame",),
-        )
-        self.canvas.create_line(
-            2,
-            separator_y,
-            width - 2,
-            separator_y,
-            fill="black",
-            width=4,
-            tags=("game_frame",),
-        )
-        self.canvas.create_line(
-            2,
-            label_divider_y,
-            width - 2,
-            label_divider_y,
-            fill="black",
-            width=4,
-            tags=("game_frame",),
-        )
-
-        self.canvas.create_text(
-            width / 2,
-            separator_y / 2,
-            text=KEI_TEXT,
-            fill="black",
-            font=("Malgun Gothic", 64, "bold"),
-            tags=("dummy_text",),
-        )
-        self.draw_game_close_button()
-
-    def draw_game_close_button(self):
-        width, _ = self.size()
-        button_size = 44
-        margin = 18
-        x1 = width - margin - button_size
-        y1 = margin
-
-        self.canvas.delete("game_close")
-        self.canvas.create_rectangle(
-            x1,
-            y1,
-            x1 + button_size,
-            y1 + button_size,
-            fill="white",
-            outline="black",
-            width=2,
-            tags=("game_close",),
-        )
-        self.canvas.create_text(
-            x1 + button_size / 2,
-            y1 + button_size / 2,
-            text="X",
-            fill="black",
-            font=("Malgun Gothic", 20, "bold"),
-            tags=("game_close",),
-        )
-        self.canvas.tag_raise("game_close")
-        self.canvas.tag_bind("game_close", "<Button-1>", self.return_to_title)
-        self.canvas.tag_bind("game_close", "<Enter>", lambda _: self.root.configure(cursor="hand2"))
-        self.canvas.tag_bind("game_close", "<Leave>", lambda _: self.root.configure(cursor=""))
-
-    def return_to_title(self, event=None):
-        self.is_transitioning = False
-        self.choices_visible = False
-        self.choice_label_visible = False
-        self.waiting_for_choice_click = False
-        self.transition_rect = None
-        self.draw_title_screen()
-
-    def choice_area_top(self, height):
-        return height - min(190, height * 0.28)
-
-    def choice_label_divider_y(self, height):
-        return self.choice_area_top(height) + min(58, height * 0.075)
-
-    def draw_choice_label(self, text, fill):
-        width, height = self.size()
-        separator_y = self.choice_area_top(height)
-        side_margin = max(28, width * 0.035)
-
-        self.canvas.delete("choice_label")
-
-        self.choice_label = self.canvas.create_text(
-            side_margin + 4,
-            separator_y + 28,
-            text=text,
-            anchor="w",
-            fill=fill,
-            font=("Malgun Gothic", 20),
-            tags=("choice_label",),
-        )
-
-    def draw_choices(self, outline="#000000"):
-        width, height = self.size()
-        self.canvas.delete("choices")
-        self.choice_items = []
-
-        label_divider_y = self.choice_label_divider_y(height)
-        side_margin = max(28, width * 0.035)
-        column_gap = max(36, width * 0.055)
-        row_gap = max(16, height * 0.022)
-        choice_width = (width - side_margin * 2 - column_gap) / 2
-        choice_height = min(32, height * 0.043)
-        start_x = side_margin
-        start_y = label_divider_y + 22
-
-        for index in range(4):
-            row = index // 2
-            column = index % 2
-            x1 = start_x + column * (choice_width + column_gap)
-            y1 = start_y + row * (choice_height + row_gap)
-            x2 = x1 + choice_width
-            y2 = y1 + choice_height
-            item = self.canvas.create_rectangle(
-                x1,
-                y1,
-                x2,
-                y2,
-                fill="#ffffff",
-                outline=outline,
-                width=2,
-                tags=("choices",),
-            )
-            self.choice_items.append(item)
-
-    def start_transition(self, event=None):
-        if (
-            self.is_transitioning
-            or self.settings_open
-            or self.settings_animating
-            or self.how_to_play_open
-            or self.how_to_play_animating
-        ):
-            return
-
-        self.is_transitioning = True
-        self.root.configure(cursor="")
-        self.canvas.tag_unbind("start_button", "<Button-1>")
-        self.animate_cover(start_time=None)
-
-    def ease_out_cubic(self, value):
-        return 1 - pow(1 - value, 3)
-
-    def animate_cover(self, start_time):
-        now = self.root.tk.call("clock", "milliseconds")
-        if start_time is None:
-            start_time = now
-
-        elapsed = now - start_time
-        progress = min(elapsed / TRANSITION_MS, 1)
-        eased = self.ease_out_cubic(progress)
-
-        width, height = self.size()
-        rect_width = width * 1.1
-        x1 = width - rect_width * eased
-        x2 = x1 + rect_width
-
-        if self.transition_rect is None:
-            self.transition_rect = self.canvas.create_rectangle(
-                x1,
-                0,
-                x2,
-                height,
-                fill="black",
-                outline="black",
-                tags=("transition",),
-            )
-        else:
-            self.canvas.coords(self.transition_rect, x1, 0, x2, height)
-
-        self.canvas.tag_raise("transition")
-
-        if progress < 1:
-            self.root.after(FPS_MS, lambda: self.animate_cover(start_time))
-        else:
-            self.screen = "dummy"
-            self.choices_visible = False
-            self.choice_label_visible = False
-            self.waiting_for_choice_click = False
-            self.bubble_text = BUBBLE_READY_TEXT
-            self.bubble_color = "#000000"
-            self.canvas.delete("title_screen")
-            self.draw_dummy_text()
-            self.canvas.tag_raise("transition")
-            self.root.after(HOLD_MS, lambda: self.animate_uncover(start_time=None))
-
-    def animate_uncover(self, start_time):
-        now = self.root.tk.call("clock", "milliseconds")
-        if start_time is None:
-            start_time = now
-
-        elapsed = now - start_time
-        progress = min(elapsed / TRANSITION_MS, 1)
-        reversed_eased = 1 - self.ease_out_cubic(progress)
-
-        width, height = self.size()
-        rect_width = width * 1.1
-        x1 = width - rect_width * reversed_eased
-        x2 = x1 + rect_width
-
-        self.canvas.coords(self.transition_rect, x1, 0, x2, height)
-        self.canvas.tag_raise("transition")
-
-        if progress < 1:
-            self.root.after(FPS_MS, lambda: self.animate_uncover(start_time))
-        else:
-            self.canvas.delete("transition")
-            self.transition_rect = None
-            self.is_transitioning = False
-            self.root.after(CONTENT_DELAY_MS, self.show_choice_label)
-
-    def show_choice_label(self):
-        if self.screen != "dummy":
-            return
-
-        self.choice_label_visible = True
-        self.bubble_text = BUBBLE_READY_TEXT
-        self.bubble_color = "#ffffff"
-        self.draw_choice_label(self.bubble_text, self.bubble_color)
-        self.fade_bubble(start_time=None)
-
-    def fade_bubble(self, start_time):
-        if self.screen != "dummy":
-            return
-
-        now = self.root.tk.call("clock", "milliseconds")
-        if start_time is None:
-            start_time = now
-
-        elapsed = now - start_time
-        progress = min(elapsed / BUBBLE_FADE_MS, 1)
-        channel = round(255 + (0 - 255) * progress)
-        self.bubble_color = f"#{channel:02x}{channel:02x}{channel:02x}"
-
-        if self.choice_label is not None:
-            self.canvas.itemconfigure(self.choice_label, fill=self.bubble_color)
-
-        if progress < 1:
-            self.root.after(FPS_MS, lambda: self.fade_bubble(start_time))
-        else:
-            self.bubble_color = "#000000"
-            self.root.after(DIALOG_DELAY_MS, lambda: self.type_dialog(index=0))
-
-    def type_dialog(self, index):
-        if self.screen != "dummy":
-            return
-
-        self.bubble_text = BUBBLE_READY_TEXT + BUBBLE_DIALOG_GAP + DIALOG_TEXT[:index]
-        if self.choice_label is not None:
-            self.canvas.itemconfigure(self.choice_label, text=self.bubble_text, fill="#000000")
-
-        if index < len(DIALOG_TEXT):
-            self.root.after(self.type_interval_ms(), lambda: self.type_dialog(index + 1))
-        else:
-            self.root.after(CHOICE_DELAY_MS, self.start_choice_fade)
-
-    def type_interval_ms(self):
-        _, speed = TEXT_SPEEDS[self.text_speed_key]
-        return max(1, round(60000 / speed))
-
-    def start_choice_fade(self, event=None):
-        if self.screen != "dummy" or self.choices_visible:
-            return
-
-        self.waiting_for_choice_click = False
-        self.choices_visible = True
-        self.canvas.unbind("<Button-1>")
-        self.draw_choices(outline="#ffffff")
-        self.fade_choices(start_time=None)
-
-    def fade_choices(self, start_time):
-        if self.screen != "dummy":
-            return
-
-        now = self.root.tk.call("clock", "milliseconds")
-        if start_time is None:
-            start_time = now
-
-        elapsed = now - start_time
-        progress = min(elapsed / CHOICE_FADE_MS, 1)
-        channel = round(255 + (0 - 255) * progress)
-        outline = f"#{channel:02x}{channel:02x}{channel:02x}"
-
-        for item in self.choice_items:
-            self.canvas.itemconfigure(item, outline=outline)
-
-        if progress < 1:
-            self.root.after(FPS_MS, lambda: self.fade_choices(start_time))
 
 
 if __name__ == "__main__":
